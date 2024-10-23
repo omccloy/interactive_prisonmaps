@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Display a popup on click</title>
+<meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+<link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
+<script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
+<style>
+body { margin: 0; padding: 0; height: 100%; }
+</style>
+</head>
+<body>
+
+<style>
+    .mapboxgl-popup {
+        max-width: 400px;
+        font: 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif;
+    }
+    #popup {
+        width: 50%;
+        position: absolute; top: 0; bottom: 0;
+        left: 50%;
+        z-index: 1;
+        border: 1px solid black;
+    }
+    #map {
+        z-index: -1;
+        position: absolute; top: 0; bottom: 0;
+        width: 50%;
+    }
+</style>
+
+<div id="map"></div>
+<div id="popup"></div>
+
+<script>
+    // 1. Add your Mapbox access token
+    mapboxgl.accessToken = 'pk.eyJ1IjoibWNjbGl2aW4iLCJhIjoiY2xvaHRndTZjMTc5ZTJpcDkzdnU4ajl5OSJ9.ooSPJVrvlbTQiWwbHkdYTQ'; // Your access token
+
+    // 2. Initialize the first map with the prison data
+    const map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/mcclivin/cm2m6tnrv001a01qi60vq00ql', // Prison map style
+        center: [-98.5795, 39.8283], // Default center (USA); adjust as needed
+        zoom: 4 // Adjust zoom level to view the whole country
+    });
+
+    // 3. Initialize the satellite map
+    const satMap = new mapboxgl.Map({
+        container: 'popup',
+        style: 'mapbox://styles/mcclivin/cm2m7wwe3001g01phhghihjto', // Satellite map style
+        center: [-73.9857, 40.7488], // Example coordinates for New York City; adjust as needed
+        zoom: 16 // Close-up zoom for detailed view
+    });
+
+    map.on('load', () => {
+        // Uncomment to print layers in the console
+        // console.log(map.getStyle().layers);
+
+        // 4. Set up click interaction for the prison boundaries
+        map.on('click', 'prison_boundaries', (e) => { // Replace 'prison_boundaries' with the actual layer name from your map style
+
+            const clickedOnFeature = e.features[0]; // The feature that was clicked
+            const coordinates = clickedOnFeature.geometry.coordinates.slice();
+
+            // Uncomment to see available properties
+            // console.log(e.features[0].properties);
+
+            // Access properties for the popup
+            const address = clickedOnFeature.properties.ADDRESS;
+            const city = clickedOnFeature.properties.CITY;
+            const capacity = clickedOnFeature.properties.CAPACITY;
+
+            // Create the popup text
+            const popupText = `<strong>Address:</strong> ${address} <br><strong>City:</strong> ${city} <br><strong>Capacity:</strong> ${capacity}`;
+
+            // Set the center and zoom of the satellite map to the clicked feature's location
+            satMap.setCenter(coordinates);
+            satMap.setZoom(16); // Adjust zoom for the satellite map as needed
+
+            // Ensure the popup shows correctly even if crossing longitude boundaries
+            while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+                coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+            }
+
+            // Create the popup on the main map
+            new mapboxgl.Popup()
+                .setLngLat(coordinates)
+                .setHTML(popupText) // Display the prison data in the popup
+                .addTo(map);
+        });
+
+        // 5. Change the cursor to a pointer when hovering over the prison layer
+        map.on('mouseenter', 'prison_boundaries', () => {
+            map.getCanvas().style.cursor = 'pointer';
+        });
+
+        // 6. Reset the cursor when it leaves the prison layer
+        map.on('mouseleave', 'prison_boundaries', () => {
+            map.getCanvas().style.cursor = '';
+        });
+    });
+</script>
+
+</body>
+</html>
